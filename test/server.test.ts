@@ -159,45 +159,6 @@ test("catalog and solar routes proxy structured backend data", async () => {
   });
 });
 
-test("scan route validates query parameters and proxies the Kepler response", async () => {
-  let requested: unknown;
-  const scan = {
-    scan: {
-      modelVersion: "resource-probability-v2",
-      origin: { x: 2, y: -1 },
-      sensorStrength: 80,
-      radiusTiles: 1,
-      tiles: [],
-    },
-  };
-  const app = createApp({
-    scanHabitat: async (options) => {
-      requested = options;
-      return scan;
-    },
-  });
-
-  const response = await app.request("/scan?x=2&y=-1&strength=80&radius=1");
-
-  expect(response.status).toBe(200);
-  expect(requested).toEqual({ x: 2, y: -1, sensorStrength: 80, radiusTiles: 1 });
-  expect(await response.json()).toEqual(scan);
-});
-
-test("scan route rejects invalid query parameters", async () => {
-  const app = createApp({ scanHabitat: async () => ({ scan: {} }) });
-
-  for (const [query, message] of [
-    ["y=0&strength=50&radius=0", "scan x must be an integer"],
-    ["x=0&y=0&strength=101&radius=0", "sensor strength must be an integer between 0 and 100"],
-    ["x=0&y=0&strength=50&radius=6", "scan radius must be an integer between 0 and 5"],
-  ]) {
-    const response = await app.request(`/scan?${query}`);
-    expect(response.status).toBe(400);
-    expect(await response.json()).toEqual({ error: { message } });
-  }
-});
-
 test("backend errors are returned as structured JSON", async () => {
   const app = createApp({
     getRegistration: async () => {

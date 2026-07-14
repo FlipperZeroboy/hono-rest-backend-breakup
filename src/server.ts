@@ -14,7 +14,6 @@ import {
   loadLocalRegistration,
   registerHabitat,
   removeInventoryResource,
-  scanHabitat,
   startConstruction,
   showBlueprint,
   showModule,
@@ -36,7 +35,6 @@ import {
   type LocalRegistration,
   type ProductionBlueprint,
   type TickSummary,
-  type WorldScanOptions,
 } from "./habitat";
 
 declare const Bun: {
@@ -78,7 +76,6 @@ type AppOptions = {
   startConstruction?: (blueprintId: string) => Promise<ConstructionStart>;
   listConstructionJobs?: () => Promise<ConstructionJobStatus[]>;
   cancelConstructionJob?: (facilityId: string) => Promise<ConstructionCancelResult>;
-  scanHabitat?: (options: Omit<WorldScanOptions, "cwd" | "fetchImpl" | "projectRoot">) => Promise<unknown>;
 };
 
 type RegistrationSource = Pick<LocalRegistration, "habitatUuid" | "habitatId" | "displayName"> & {
@@ -146,8 +143,6 @@ export function createApp(options: AppOptions = {}) {
   const start = options.startConstruction ?? ((blueprintId) => startConstruction(blueprintId, { fetchImpl: keplerFetch }));
   const getConstructionJobs = options.listConstructionJobs ?? listConstructionJobs;
   const cancelConstruction = options.cancelConstructionJob ?? cancelConstructionJob;
-  const scan = options.scanHabitat ?? ((scanOptions: Omit<WorldScanOptions, "cwd" | "fetchImpl" | "projectRoot">) =>
-    scanHabitat({ ...scanOptions, fetchImpl: keplerFetch }));
 
   app.use("*", async (context, next) => {
     await next();
@@ -157,11 +152,7 @@ export function createApp(options: AppOptions = {}) {
 
   app.onError((error, context) => {
     const message = error instanceof Error ? error.message : "Habitat backend request failed.";
-    const status = error instanceof HttpQueryError
-      ? 400
-      : message.startsWith("Blueprint not found:")
-        ? 404
-        : 500;
+    const status = message.startsWith("Blueprint not found:") ? 404 : 500;
     context.set("logSummary", `error (${status})`);
     return context.json({ error: { message } }, status);
   });
@@ -226,26 +217,6 @@ export function createApp(options: AppOptions = {}) {
   app.get("/solar/irradiance", async (context) => {
     context.set("logSummary", "proxied to Kepler");
     return context.json(await getSolar());
-  });
-  app.get("/scan", async (context) => {
-    const query = new URL(context.req.url).searchParams;
-    const x = parseIntegerQuery(query.get("x"), "scan x must be an integer");
-    const y = parseIntegerQuery(query.get("y"), "scan y must be an integer");
-    const sensorStrength = parseBoundedIntegerQuery(
-      query.get("strength"),
-      0,
-      100,
-      "sensor strength must be an integer between 0 and 100",
-    );
-    const radiusTiles = parseBoundedIntegerQuery(
-      query.get("radius"),
-      0,
-      5,
-      "scan radius must be an integer between 0 and 5",
-    );
-
-    context.set("logSummary", "proxied to Kepler");
-    return context.json(await scan({ x, y, sensorStrength, radiusTiles }));
   });
 
   app.get("/modules", async (context) => {
@@ -376,26 +347,6 @@ async function readJsonBody(context: { req: { json: <T>() => Promise<T> } }) {
     throw new Error("Request body must be JSON.");
   }
 }
-
-function parseIntegerQuery(value: string | null, message: string) {
-  if (value === null || !/^-?\d+$/.test(value)) {
-    throw new HttpQueryError(message);
-  }
-
-  return Number(value);
-}
-
-function parseBoundedIntegerQuery(value: string | null, minimum: number, maximum: number, message: string) {
-  const parsed = parseIntegerQuery(value, message);
-
-  if (parsed < minimum || parsed > maximum) {
-    throw new HttpQueryError(message);
-  }
-
-  return parsed;
-}
-
-class HttpQueryError extends Error {}
 
 function toRegistrationView(registration: RegistrationSource): RegistrationView {
   return {
