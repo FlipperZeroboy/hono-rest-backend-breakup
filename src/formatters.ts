@@ -2,9 +2,6 @@ import type {
   HabitatModule,
   IndustryResource,
   ProductionBlueprint,
-  WorldScanProbability,
-  WorldScanQuantityEstimate,
-  WorldScanTile,
 } from "./habitat";
 import { formatJsonField, formatNumber } from "./cli-utils";
 
@@ -242,56 +239,4 @@ export function printResourceCatalogNotes() {
   console.log("Resource catalog: possible resource types in the Kepler world.");
   console.log("Local inventory: resources your habitat owns are managed with `habitat inventory`.");
   console.log("Blueprint requirements: resources or modules needed to build something later.");
-}
-
-function probabilityLabel(probability: WorldScanProbability) {
-  return `${probability.resourceType ?? "unknown"}: ${formatNumber(probability.probabilityPct)}%`;
-}
-
-function printQuantityEstimate(quantity: WorldScanQuantityEstimate | null) {
-  if (!quantity) {
-    console.log("Quantity: unknown");
-    return;
-  }
-
-  if (quantity.exact || quantity.minimumKg === quantity.maximumKg) {
-    console.log(`Quantity: ${formatNumber(quantity.estimatedKg)} ${quantity.unit} (exact)`);
-    return;
-  }
-
-  console.log(
-    `Quantity: ${quantity.minimumKg}-${quantity.maximumKg} ${quantity.unit} (estimated; about ${quantity.estimatedKg} ${quantity.unit})`,
-  );
-}
-
-function printWorldScanTile(tile: WorldScanTile, includeDistribution: boolean) {
-  console.log(`Tile (${tile.x}, ${tile.y}) | Distance: ${formatNumber(tile.distanceTiles)} tiles`);
-  console.log(
-    `Most Likely Resource: ${tile.topCandidate.resourceType ?? "unknown"} (${formatNumber(tile.topCandidate.probabilityPct)}%)`,
-  );
-  printQuantityEstimate(tile.quantityEstimate);
-
-  if (includeDistribution) {
-    console.log("Probability Distribution:");
-    for (const probability of tile.probabilities) {
-      console.log(`  ${probabilityLabel(probability)}`);
-    }
-  }
-}
-
-export function printWorldScan(scan: {
-  origin: { x: number; y: number };
-  sensorStrength: number;
-  radiusTiles: number;
-  tiles: WorldScanTile[];
-}) {
-  console.log(`Scan Origin: (${scan.origin.x}, ${scan.origin.y})`);
-  console.log(`Sensor Strength: ${scan.sensorStrength}`);
-  console.log(`Radius: ${scan.radiusTiles} tiles`);
-  console.log(`Tiles: ${scan.tiles.length}`);
-
-  for (const tile of scan.tiles) {
-    console.log("");
-    printWorldScanTile(tile, scan.radiusTiles === 0);
-  }
 }

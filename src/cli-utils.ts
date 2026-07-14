@@ -23,36 +23,6 @@ export function parseTickCount(value: string) {
   return count;
 }
 
-export function parseScanCoordinate(value: string) {
-  const coordinate = Number(value);
-
-  if (!Number.isInteger(coordinate)) {
-    throw new Error("scan coordinates must be integers");
-  }
-
-  return coordinate;
-}
-
-export function parseSensorStrength(value: string) {
-  const strength = Number(value);
-
-  if (!Number.isInteger(strength) || strength < 0 || strength > 100) {
-    throw new Error("sensor strength must be an integer between 0 and 100");
-  }
-
-  return strength;
-}
-
-export function parseScanRadius(value: string) {
-  const radius = Number(value);
-
-  if (!Number.isInteger(radius) || radius < 0 || radius > 5) {
-    throw new Error("scan radius must be an integer between 0 and 5");
-  }
-
-  return radius;
-}
-
 export function formatNumber(value: number) {
   return Number(value.toFixed(5)).toString();
 }
