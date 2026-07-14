@@ -22,7 +22,6 @@ import {
   LocalRegistration,
   registerHabitat,
   removeInventoryResource,
-  scanHabitat,
   setModuleStatus,
   showBlueprint,
   showModule,
@@ -1889,90 +1888,6 @@ test("getSolarIrradiance fetches and parses the current Kepler solar irradiance"
       condition: "clear",
     },
   });
-});
-
-test("scanHabitat sends the saved habitat ID and scan parameters to Kepler", async () => {
-  await getLocalStateStore(tempDir).save({
-    habitatUuid: "11111111-1111-4111-8111-111111111111",
-    habitatId: "habitat_11111111_1111_4111_8111_111111111111",
-    displayName: "Artemis Ridge",
-    registeredAt: "2026-07-06T12:00:00.000Z",
-    currentTick: 0,
-    starterModules: [],
-    blueprints: [],
-    modules: [],
-    powerSummary: {
-      totalPowerDrawKw: 0,
-      energyUsedKwh: 0,
-      batteryEnergyKwh: 0,
-      batteryCapacityKwh: 0,
-      powerShortageKwh: 0,
-    },
-    tickHistory: [],
-  });
-  const requests: { url: string; init?: RequestInit }[] = [];
-  const expected = {
-    scan: {
-      modelVersion: "resource-probability-v2",
-      origin: { x: 0, y: 0 },
-      sensorStrength: 100,
-      radiusTiles: 0,
-      tiles: [{
-        x: 0,
-        y: 0,
-        terrain: "flat",
-        distanceTiles: 0,
-        probabilities: [{ resourceType: "ferrite", probabilityPct: 100 }],
-        topCandidate: { resourceType: "ferrite", probabilityPct: 100 },
-        quantityEstimate: {
-          resourceType: "ferrite",
-          unit: "kg",
-          estimatedKg: 184,
-          minimumKg: 184,
-          maximumKg: 184,
-          exact: true,
-        },
-      }],
-    },
-  };
-
-  const result = await scanHabitat({
-    cwd: tempDir,
-    x: 0,
-    y: 0,
-    sensorStrength: 100,
-    radiusTiles: 0,
-    fetchImpl: async (input, init) => {
-      requests.push({ url: String(input), init });
-      return Response.json(expected);
-    },
-  });
-
-  expect(result).toEqual(expected);
-  expect(requests).toHaveLength(1);
-  const request = new URL(requests[0].url);
-  expect(request.pathname).toBe("/world/scan");
-  expect(Object.fromEntries(request.searchParams)).toEqual({
-    habitatId: "habitat_11111111_1111_4111_8111_111111111111",
-    x: "0",
-    y: "0",
-    sensorStrength: "100",
-    radiusTiles: "0",
-  });
-  expect(requests[0].init?.method).toBe("GET");
-  expect((requests[0].init?.headers as Record<string, string>).Authorization).toBe("Bearer test-token");
-});
-
-test("scanHabitat rejects invalid scan bounds", async () => {
-  await expect(scanHabitat({ cwd: tempDir, x: 0.5, y: 0, sensorStrength: 100, radiusTiles: 0 })).rejects.toThrow(
-    "scan x must be an integer",
-  );
-  await expect(scanHabitat({ cwd: tempDir, x: 0, y: 0, sensorStrength: 101, radiusTiles: 0 })).rejects.toThrow(
-    "sensor strength must be an integer between 0 and 100",
-  );
-  await expect(scanHabitat({ cwd: tempDir, x: 0, y: 0, sensorStrength: 100, radiusTiles: 6 })).rejects.toThrow(
-    "scan radius must be an integer between 0 and 5",
-  );
 });
 
 test("unregisterHabitat deletes server registration before removing the local registration file", async () => {

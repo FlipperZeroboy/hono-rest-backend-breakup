@@ -220,40 +220,6 @@ export type SolarIrradianceStatus = {
   };
 };
 
-export type WorldScanProbability = {
-  resourceType: string | null;
-  probabilityPct: number;
-};
-
-export type WorldScanQuantityEstimate = {
-  resourceType: string;
-  unit: "kg";
-  estimatedKg: number;
-  minimumKg: number;
-  maximumKg: number;
-  exact: boolean;
-};
-
-export type WorldScanTile = {
-  x: number;
-  y: number;
-  terrain: string;
-  distanceTiles: number;
-  probabilities: WorldScanProbability[];
-  topCandidate: WorldScanProbability;
-  quantityEstimate: WorldScanQuantityEstimate | null;
-};
-
-export type WorldScanResponse = {
-  scan: {
-    modelVersion: string;
-    origin: { x: number; y: number };
-    sensorStrength: number;
-    radiusTiles: number;
-    tiles: WorldScanTile[];
-  };
-};
-
 export type ConfigCheck = {
   baseUrl: string;
   tokenLoaded: boolean;
@@ -264,13 +230,6 @@ type RuntimeOptions = {
   cwd?: string;
   fetchImpl?: FetchLike;
   projectRoot?: string;
-};
-
-export type WorldScanOptions = RuntimeOptions & {
-  x: number;
-  y: number;
-  sensorStrength: number;
-  radiusTiles: number;
 };
 
 type RegisterOptions = RuntimeOptions & {
@@ -587,48 +546,6 @@ export async function listResourceCatalog(options: RuntimeOptions = {}): Promise
     catalogVersion: String(body.catalogVersion ?? ""),
     resources: Array.isArray(body.resources) ? body.resources : [],
   };
-}
-
-export async function scanHabitat(options: WorldScanOptions): Promise<WorldScanResponse> {
-  if (!Number.isInteger(options.x)) {
-    throw new Error("scan x must be an integer");
-  }
-
-  if (!Number.isInteger(options.y)) {
-    throw new Error("scan y must be an integer");
-  }
-
-  if (!Number.isInteger(options.sensorStrength) || options.sensorStrength < 0 || options.sensorStrength > 100) {
-    throw new Error("sensor strength must be an integer between 0 and 100");
-  }
-
-  if (!Number.isInteger(options.radiusTiles) || options.radiusTiles < 0 || options.radiusTiles > 5) {
-    throw new Error("scan radius must be an integer between 0 and 5");
-  }
-
-  const cwd = await resolveProjectRoot(
-    options.cwd ?? process.cwd(),
-    options.projectRoot,
-  );
-  const { registration } = await loadRequiredRegistration({ cwd, projectRoot: options.projectRoot });
-  const config = await loadConfig(cwd);
-  const fetchImpl = options.fetchImpl ?? fetch;
-  const query = new URLSearchParams({
-    habitatId: registration.habitatId,
-    x: String(options.x),
-    y: String(options.y),
-    sensorStrength: String(options.sensorStrength),
-    radiusTiles: String(options.radiusTiles),
-  });
-  const response = await fetchImpl(`${config.baseUrl}/world/scan?${query}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer ${config.token}`,
-    },
-  });
-
-  await assertOk(response, "World scan request");
-  return (await parseJsonResponse(response)) as WorldScanResponse;
 }
 
 export async function showBlueprint(id: string, options: RuntimeOptions = {}) {
